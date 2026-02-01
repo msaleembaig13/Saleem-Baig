@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saleem Baig Web GIS</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+}
+#map {
+    height: 100vh;
+    width: 100%;
+}
+.controls {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1000;
+    background: white;
+    padding: 10px;
+    border-radius: 5px;
+}
+.controls button {
+    display: block;
+    width: 100%;
+    margin: 6px 0;
+    padding: 8px;
+    background: #3498db;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+}
+.coordinates-display {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: rgba(255,255,255,0.85);
+    padding: 10px;
+    border-radius: 5px;
+}
+.dark-mode {
+    background: #222;
+    color: #eee;
+}
+</style>
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<div class="controls">
+    <button id="themeToggle">Theme</button>
+    <button id="addMarkerBtn">Add Marker</button>
+    <button id="clearMarkersBtn">Clear</button>
+    <button id="getCoordinatesBtn">My Location</button>
+    <button id="downloadCoordsBtn">Download CSV</button>
+</div>
+
+<div class="coordinates-display" id="coordinatesDisplay">
+    Click on map to get coordinates
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<script>
+const map = L.map('map').setView([35.2975, 75.6337], 12);
+
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+    .addTo(map);
+
+L.control.layers({
+    "OpenStreetMap": osm
+}).addTo(map);
+
+L.Control.geocoder({ position: "topleft" }).addTo(map);
+
+let markers = [];
+let addMarkerMode = false;
+
+document.getElementById('addMarkerBtn').onclick = () => addMarkerMode = true;
+
+map.on('click', e => {
+    const lat = e.latlng.lat.toFixed(5);
+    const lng = e.latlng.lng.toFixed(5);
+
+    document.getElementById('coordinatesDisplay').innerHTML =
+        `Lat: ${lat}<br>Lng: ${lng}`;
+
+    if (addMarkerMode) {
+        const m = L.marker(e.latlng)
+            .addTo(map)
+            .bindPopup(`Lat: ${lat}<br>Lng: ${lng}`);
+        markers.push(m);
+        addMarkerMode = false;
+    }
+});
+
+document.getElementById('clearMarkersBtn').onclick = () => {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+};
+
+document.getElementById('getCoordinatesBtn').onclick = () => {
+    navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        map.setView([lat, lng], 14);
+        const m = L.marker([lat, lng]).addTo(map);
+        markers.push(m);
+    });
+};
+
+document.getElementById('downloadCoordsBtn').onclick = () => {
+    if (!markers.length) return alert("No markers");
+
+    let csv = "Lat,Lng\n";
+    markers.forEach(m => {
+        const p = m.getLatLng();
+        csv += `${p.lat},${p.lng}\n`;
+    });
+
+    saveAs(new Blob([csv], { type: "text/csv;charset=utf-8;" }),
+        "coordinates.csv");
+};
+
+document.getElementById('themeToggle').onclick = () => {
+    document.body.classList.toggle('dark-mode');
+};
+</script>
+
+</body>
+</html>
